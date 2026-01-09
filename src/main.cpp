@@ -297,6 +297,7 @@ int main(int argc, char* argv[]) {
                 // Reset effect timer for next connection
                 effectTimerInitialized = false;
                 effectState = EffectState::PASSTHROUGH;
+                staticEffect.resetForIdle();  // Start growing animation
             }
             hadConsumers = hasConsumers;
         }
@@ -306,8 +307,7 @@ int main(int argc, char* argv[]) {
             case CameraState::IDLE:
                 // No consumers, output static slowly (low CPU)
                 outputFrame = staticEffect.generate();
-                cv::waitKey(100);  // Slow poll when idle
-                continue;
+                break;  // Still need to write frame for v4l2loopback
 
             case CameraState::CONNECTING:
                 // Try to open camera
@@ -333,6 +333,7 @@ int main(int argc, char* argv[]) {
                     std::cout << "Camera unavailable, polling...\n";
                     cameraState = CameraState::UNAVAILABLE;
                     lastCameraPollTime = currentTime;
+                    staticEffect.resetForIdle();  // Start growing animation
                 }
                 outputFrame = staticEffect.generate();
                 break;
@@ -393,6 +394,7 @@ int main(int argc, char* argv[]) {
                             if (!effectsFinished && currentTime >= nextEffectTime) {
                                 effectState = EffectState::STATIC;
                                 stateStartTime = currentTime;
+                                staticEffect.resetForEffect();  // Full-size static for effect
                                 std::cout << "Effect triggered! Showing static...\n";
                             }
                             outputFrame = frame;

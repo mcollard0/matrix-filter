@@ -1,6 +1,10 @@
 # Matrix Filter
 
-A virtual camera application that passes video through from a real camera with random Matrix-style glitch effects at configurable intervals. Perfect for adding some Neo-style flair to your video calls.
+A virtual camera application that passes video through from a real camera with random Matrix-style glitch effects at configurable intervals. Perfect for adding some Neo-style flair to your long-running video calls.
+
+## A Very Poor Demo
+[Screencast_20260109_092245.webm](https://github.com/user-attachments/assets/13f2ed61-305e-4c9a-81d1-0c7768e04039)
+
 
 ## Features
 
