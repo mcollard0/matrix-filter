@@ -3,10 +3,9 @@
 A virtual camera application that passes video through from a real camera with random Matrix-style glitch effects at configurable intervals. Perfect for adding some Neo-style flair to your long-running video calls.
 
 ## A Very Poor Demo
-<div align=center>
+
 [Screencast_20260109_170437.webm](https://github.com/user-attachments/assets/83b9cee0-464f-4bff-a785-2fb0a7d30bdc)
 
-</div>
 
 ## Features
 
