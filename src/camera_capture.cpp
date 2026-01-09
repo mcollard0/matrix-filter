@@ -94,14 +94,20 @@ bool CameraCapture::setResolution(Resolution resPref) {
             if (count <= 2) {
                 selected = resolutions.back();  // Best if only 1-2 options
             } else {
-                // Middle with ceil: (count-1)/2 rounded up
-                size_t idx = (count + 1) / 2 - 1;
+                // Pick middle-high: for 6 items, pick index 3 or 4 (720p/1080p range)
+                size_t idx = (count * 2) / 3;  // 2/3 of the way up
+                if (idx >= count) idx = count - 1;
                 selected = resolutions[idx];
             }
             break;
     }
 
     std::cout << "Selected resolution: " << selected.width << "x" << selected.height << std::endl;
+
+    // For higher resolutions, use MJPG format (camera may not support YUYV at high res)
+    if (selected.width > 640 || selected.height > 480) {
+        cap_.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    }
 
     // Set the resolution
     cap_.set(cv::CAP_PROP_FRAME_WIDTH, selected.width);

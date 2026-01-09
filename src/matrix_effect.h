@@ -50,9 +50,9 @@ private:
     bool ftInitialized_ = false;
 
     std::mt19937 rng_;
-    std::uniform_int_distribution<int> speedDist_{6, 16};   // Faster speeds
+    std::uniform_int_distribution<int> speedDist_{4, 10};   // Slower speeds
     std::uniform_int_distribution<int> trailDist_{8, 30};   // Longer trails
 
     uint64_t lastUpdateTime_ = 0;
-    static constexpr int UPDATE_INTERVAL_MS = 30;  // ~33 FPS for smoother/faster animation
+    static constexpr int UPDATE_INTERVAL_MS = 50;  // ~20 FPS for smoother animation
 };

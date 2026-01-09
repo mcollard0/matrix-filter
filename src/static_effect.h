@@ -27,7 +27,7 @@ private:
     std::vector<cv::Mat> cachedFrames_;
     size_t currentFrame_ = 0;
     int frameCounter_ = 0;
-    int framesPerSwitch_ = 3;  // Show each cached frame for N generate() calls
+    int framesPerSwitch_ = 5;  // Show each cached frame for N generate() calls (slower)
 
     // Size animation
     uint64_t startTime_ = 0;
