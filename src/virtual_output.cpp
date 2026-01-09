@@ -15,8 +15,6 @@ bool VirtualOutput::open(const std::string& device, int width, int height, doubl
     close();
 
     device_ = device;
-    width_ = width;
-    height_ = height;
 
     // Check if device exists
     if (!std::filesystem::exists(device)) {
@@ -50,8 +48,19 @@ bool VirtualOutput::open(const std::string& device, int width, int height, doubl
         return false;
     }
 
+    // Store the actual negotiated values (driver may have adjusted them)
+    width_ = fmt.fmt.pix.width;
+    height_ = fmt.fmt.pix.height;
+    bytesPerLine_ = fmt.fmt.pix.bytesperline;
     frameSize_ = fmt.fmt.pix.sizeimage;
-    std::cout << "Opened virtual camera: " << device << " (" << width << "x" << height << " YUYV)" << std::endl;
+
+    // Verify format was accepted
+    if (width_ != width || height_ != height) {
+        std::cout << "Note: Virtual camera negotiated " << width_ << "x" << height_
+                  << " (requested " << width << "x" << height << ")" << std::endl;
+    }
+
+    std::cout << "Opened virtual camera: " << device << " (" << width_ << "x" << height_ << " YUYV)" << std::endl;
     return true;
 }
 
@@ -71,8 +80,16 @@ void VirtualOutput::writeFrame(const cv::Mat& frame) {
     cv::Mat yuyv;
     cv::cvtColor(resized, yuyv, cv::COLOR_BGR2YUV_YUYV);
 
-    // Write to device
-    ssize_t written = write(fd_, yuyv.data, frameSize_);
+    // Write exactly the buffer size (not the pre-computed frameSize_)
+    size_t bytesToWrite = yuyv.total() * yuyv.elemSize();
+
+    // Sanity check: warn if sizes don't match
+    if (bytesToWrite != frameSize_) {
+        std::cerr << "Warning: Buffer size mismatch (buffer=" << bytesToWrite
+                  << ", expected=" << frameSize_ << ")" << std::endl;
+    }
+
+    ssize_t written = write(fd_, yuyv.data, bytesToWrite);
     if (written < 0) {
         std::cerr << "Write error: " << strerror(errno) << std::endl;
     }

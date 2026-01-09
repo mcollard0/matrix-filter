@@ -35,6 +35,7 @@ void printUsage(const char* progName) {
               << "  -c, --cycles <count>       Number of effect cycles, 0=infinite (default: 0)\n"
               << "  -t, --test                 Trigger effect immediately (same as --start-delay 0)\n"
               << "  --no-on-demand             Keep camera open always (don't wait for consumers)\n"
+              << "  --overlay                  Overlay matrix effect on camera feed (90% opacity)\n"
               << "  -h, --help                 Show this help\n\n"
               << "On-demand mode (default):\n"
               << "  The physical camera is only opened when an application connects to the\n"
@@ -62,6 +63,7 @@ Config parseArgs(int argc, char* argv[]) {
         {"cycles",          required_argument, nullptr, 'c'},
         {"test",            no_argument,       nullptr, 't'},
         {"no-on-demand",    no_argument,       nullptr, 'O'},
+        {"overlay",         no_argument,       nullptr, 'Y'},
         {"help",            no_argument,       nullptr, 'h'},
         {nullptr,           0,                 nullptr, 0}
     };
@@ -119,6 +121,9 @@ Config parseArgs(int argc, char* argv[]) {
                     break;
                 case 'O':
                     config.onDemand = false;
+                    break;
+                case 'Y':
+                    config.overlay = true;
                     break;
                 case 'h':
                     printUsage(argv[0]);
@@ -190,10 +195,23 @@ int main(int argc, char* argv[]) {
     std::cout << "  Effect duration: " << formatTime(config.effectDuration) << "\n";
     std::cout << "  Static duration: " << formatTime(config.staticDuration) << "\n";
     std::cout << "  On-demand mode: " << (config.onDemand ? "enabled" : "disabled") << "\n";
+    std::cout << "  Overlay mode: " << (config.overlay ? "enabled" : "disabled") << "\n";
 
-    // Default resolution for virtual camera (will be updated when real camera opens)
-    int width = 640;
-    int height = 480;
+    // Default resolution for virtual camera based on config preference
+    // This prevents blurry output when consumer connects before camera is probed
+    int width, height;
+    switch (config.resolution) {
+        case Resolution::HIGH:
+            width = 1920; height = 1080;
+            break;
+        case Resolution::MEDIUM:
+            width = 1280; height = 720;
+            break;
+        case Resolution::LOW:
+        default:
+            width = 640; height = 480;
+            break;
+    }
     double fps = 30.0;
 
     CameraCapture camera;
@@ -309,25 +327,31 @@ int main(int argc, char* argv[]) {
                 outputFrame = staticEffect.generate();
                 break;  // Still need to write frame for v4l2loopback
 
-            case CameraState::CONNECTING:
+            case CameraState::CONNECTING: {
+                // Save current resolution before trying to open camera
+                int prevW = width;
+                int prevH = height;
+
                 // Try to open camera
                 if (tryOpenCamera(camera, config, width, height)) {
                     fps = camera.getFPS();
                     std::cout << "Camera opened: " << width << "x" << height << " @ " << fps << " FPS\n";
                     cameraState = CameraState::ACTIVE;
 
-                    // Check if resolution changed
-                    int curW, curH;
-                    camera.getResolution(curW, curH);
-                    if (curW != width || curH != height) {
-                        width = curW;
-                        height = curH;
-                        // Reinitialize effects for new resolution
+                    // Check if resolution changed from what virtual output was configured for
+                    int outputW = output.getWidth();
+                    int outputH = output.getHeight();
+
+                    if (width != outputW || height != outputH) {
+                        // Resolution mismatch - consumer is already connected, can't reconfigure
+                        // v4l2loopback doesn't allow format change while consumer is reading
+                        // We'll scale frames instead (already done in writeFrame)
+                        std::cout << "Note: Camera resolution (" << width << "x" << height
+                                  << ") differs from virtual output (" << outputW << "x" << outputH
+                                  << "). Scaling frames.\n";
+                        // Keep effects at camera resolution for quality
                         staticEffect.initialize(width, height);
                         matrixEffect.initialize(width, height);
-                        // Reopen virtual output with new resolution
-                        output.close();
-                        output.open(config.outputDevice, width, height, fps);
                     }
                 } else {
                     std::cout << "Camera unavailable, polling...\n";
@@ -337,6 +361,7 @@ int main(int argc, char* argv[]) {
                 }
                 outputFrame = staticEffect.generate();
                 break;
+            }
 
             case CameraState::UNAVAILABLE:
                 // Camera busy, poll periodically
@@ -346,11 +371,18 @@ int main(int argc, char* argv[]) {
                         std::cout << "Camera now available: " << width << "x" << height << "\n";
                         cameraState = CameraState::ACTIVE;
 
-                        // Reinitialize for potentially new resolution
+                        // Reinitialize effects for camera resolution
                         staticEffect.initialize(width, height);
                         matrixEffect.initialize(width, height);
-                        output.close();
-                        output.open(config.outputDevice, width, height, fps);
+
+                        // Check if output resolution differs (consumer-locked)
+                        int outputW = output.getWidth();
+                        int outputH = output.getHeight();
+                        if (width != outputW || height != outputH) {
+                            std::cout << "Note: Scaling camera (" << width << "x" << height
+                                      << ") to output (" << outputW << "x" << outputH << ")\n";
+                            // Don't try to reopen output - consumer has it locked
+                        }
                     }
                     lastCameraPollTime = currentTime;
                 }
@@ -412,7 +444,11 @@ int main(int argc, char* argv[]) {
 
                         case EffectState::MATRIX:
                             matrixEffect.update(currentTime);
-                            outputFrame = matrixEffect.render();
+                            if (config.overlay) {
+                                outputFrame = matrixEffect.renderOverlay(frame, 0.9f);
+                            } else {
+                                outputFrame = matrixEffect.render();
+                            }
                             if (currentTime - stateStartTime >= config.effectDuration) {
                                 effectState = EffectState::PASSTHROUGH;
                                 cycleCount++;

@@ -3,8 +3,14 @@
 #include <iostream>
 #include <filesystem>
 #include <chrono>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 static std::mt19937 rng(std::random_device{}());
+
+// Cache directory base path
+static const std::string CACHE_BASE = "/tmp/matrix-filter-static";
 
 // Font paths to try
 static const char* fontPaths[] = {
@@ -114,7 +120,60 @@ void StaticEffect::renderChar(cv::Mat& img, wchar_t ch, int x, int y, uchar brig
     }
 }
 
+std::string StaticEffect::getCacheDir(int charSize) const {
+    std::ostringstream oss;
+    oss << CACHE_BASE << "/" << width_ << "x" << height_ << "_size" << charSize;
+    return oss.str();
+}
+
+bool StaticEffect::loadCachedFramesFromDisk(int charSize) {
+    std::string cacheDir = getCacheDir(charSize);
+
+    if (!std::filesystem::exists(cacheDir)) {
+        return false;
+    }
+
+    cachedFrames_.clear();
+    cachedFrames_.reserve(CACHE_SIZE);
+
+    for (int i = 0; i < CACHE_SIZE; ++i) {
+        std::ostringstream path;
+        path << cacheDir << "/frame_" << std::setfill('0') << std::setw(3) << i << ".png";
+
+        cv::Mat frame = cv::imread(path.str(), cv::IMREAD_COLOR);
+        if (frame.empty() || frame.cols != width_ || frame.rows != height_) {
+            cachedFrames_.clear();
+            return false;
+        }
+        cachedFrames_.push_back(frame);
+    }
+
+    return true;
+}
+
+void StaticEffect::saveCachedFramesToDisk(int charSize) {
+    std::string cacheDir = getCacheDir(charSize);
+
+    try {
+        std::filesystem::create_directories(cacheDir);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to create cache directory: " << e.what() << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < cachedFrames_.size(); ++i) {
+        std::ostringstream path;
+        path << cacheDir << "/frame_" << std::setfill('0') << std::setw(3) << i << ".png";
+        cv::imwrite(path.str(), cachedFrames_[i]);
+    }
+}
+
 void StaticEffect::buildCachedFrames(int charSize) {
+    // Try to load from disk cache first
+    if (loadCachedFramesFromDisk(charSize)) {
+        return;  // Successfully loaded from cache
+    }
+
     cachedFrames_.clear();
     cachedFrames_.reserve(CACHE_SIZE);
 
@@ -179,6 +238,9 @@ void StaticEffect::buildCachedFrames(int charSize) {
 
         cachedFrames_.push_back(frame);
     }
+
+    // Save to disk for future runs
+    saveCachedFramesToDisk(charSize);
 }
 
 cv::Mat StaticEffect::generate() {

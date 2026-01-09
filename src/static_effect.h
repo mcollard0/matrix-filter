@@ -19,24 +19,27 @@ public:
 private:
     void buildCachedFrames(int charSize);
     void renderChar(cv::Mat& img, wchar_t ch, int x, int y, uchar brightness, int charSize);
+    bool loadCachedFramesFromDisk(int charSize);
+    void saveCachedFramesToDisk(int charSize);
+    std::string getCacheDir(int charSize) const;
 
     int width_ = 0;
     int height_ = 0;
 
-    // Cached frames
+    // Cached frames (loaded from disk or generated)
     std::vector<cv::Mat> cachedFrames_;
     size_t currentFrame_ = 0;
     int frameCounter_ = 0;
-    int framesPerSwitch_ = 5;  // Show each cached frame for N generate() calls (slower)
+    int framesPerSwitch_ = 8;  // Show each cached frame for N generate() calls (slower)
 
     // Size animation
     uint64_t startTime_ = 0;
     int currentCharSize_ = 0;
     bool animationComplete_ = false;
 
-    static constexpr int CACHE_SIZE = 20;
-    static constexpr int MIN_CHAR_SIZE = 1;   // Start tiny
-    static constexpr int MAX_CHAR_SIZE = 5;   // Final size
+    static constexpr int CACHE_SIZE = 30;       // ~1 second at 30fps
+    static constexpr int MIN_CHAR_SIZE = 1;     // Start tiny
+    static constexpr int MAX_CHAR_SIZE = 5;     // Final size
     static constexpr uint64_t GROW_DURATION_MS = 10000;  // 10 seconds
 
     // FreeType

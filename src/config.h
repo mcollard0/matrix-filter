@@ -22,6 +22,7 @@ struct Config {
     Resolution resolution = Resolution::HIGH;  // Camera resolution preference
     bool onDemand = true;                   // Only open camera when virtual camera has consumers
     uint64_t cameraPollInterval = 1000;     // ms between camera availability checks
+    bool overlay = false;                   // Overlay matrix on camera feed instead of black background
 };
 
 enum class EffectState {

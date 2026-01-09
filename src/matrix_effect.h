@@ -24,6 +24,7 @@ public:
     bool initialize(int width, int height);
     void update(uint64_t currentTimeMs);
     cv::Mat render();
+    cv::Mat renderOverlay(const cv::Mat& background, float opacity = 0.9f);
     void reset();
 
 private:
@@ -36,8 +37,8 @@ private:
 
     int width_ = 0;
     int height_ = 0;
-    int charWidth_ = 10;      // Narrower columns for more density
-    int charHeight_ = 16;     // Smaller chars
+    int charWidth_ = 11;      // Narrower columns for more density
+    int charHeight_ = 17;     // Slightly larger chars
     int numColumns_ = 0;
 
     std::vector<MatrixColumn> columns_;

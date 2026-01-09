@@ -179,7 +179,13 @@ mpv av://v4l2:/dev/video2
 ### "Virtual camera device not found"
 Make sure v4l2loopback is loaded:
 ```bash
-sudo modprobe v4l2loopback devices=1 video_nr=2
+# Check if module is loaded
+lsmod | grep v4l2loopback
+
+# If not loaded, load it with proper options
+sudo modprobe v4l2loopback devices=1 video_nr=2 card_label="Matrix_Filter" exclusive_caps=1
+
+# Verify the device was created
 v4l2-ctl --list-devices
 ```
 

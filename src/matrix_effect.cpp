@@ -219,6 +219,39 @@ cv::Mat MatrixEffect::render() {
     return buffer_.clone();
 }
 
+cv::Mat MatrixEffect::renderOverlay(const cv::Mat& background, float opacity) {
+    // Resize background if needed
+    cv::Mat bg;
+    if (background.cols != width_ || background.rows != height_) {
+        cv::resize(background, bg, cv::Size(width_, height_));
+    } else {
+        bg = background.clone();
+    }
+
+    // Render matrix effect on black buffer
+    cv::Mat matrixLayer = render();
+
+    // Blend: where matrix has content (non-black), overlay it on background
+    // For pixels with matrix content, use: result = bg * (1-opacity) + matrix * opacity
+    for (int y = 0; y < height_; ++y) {
+        cv::Vec3b* bgRow = bg.ptr<cv::Vec3b>(y);
+        const cv::Vec3b* matrixRow = matrixLayer.ptr<cv::Vec3b>(y);
+
+        for (int x = 0; x < width_; ++x) {
+            const cv::Vec3b& mp = matrixRow[x];
+            // Check if matrix pixel has content (not pure black)
+            if (mp[0] > 0 || mp[1] > 0 || mp[2] > 0) {
+                cv::Vec3b& bp = bgRow[x];
+                bp[0] = static_cast<uchar>(bp[0] * (1.0f - opacity) + mp[0] * opacity);
+                bp[1] = static_cast<uchar>(bp[1] * (1.0f - opacity) + mp[1] * opacity);
+                bp[2] = static_cast<uchar>(bp[2] * (1.0f - opacity) + mp[2] * opacity);
+            }
+        }
+    }
+
+    return bg;
+}
+
 void MatrixEffect::reset() {
     for (auto& col : columns_) {
         initializeColumn(col);
