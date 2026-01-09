@@ -9,8 +9,7 @@ A virtual camera application that passes video through from a real camera with r
 
 ## A Very Poor Demo
 
-[Screencast_20260109_170437.webm](https://github.com/user-attachments/assets/83b9cee0-464f-4bff-a785-2fb0a7d30bdc)
-
+[Screencast_20260109_173532.webm](https://github.com/user-attachments/assets/212794b0-93c4-43c8-a653-590162a3d0fe)
 
 ## Features
 
