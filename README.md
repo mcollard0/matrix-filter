@@ -1,4 +1,9 @@
+
 # Matrix Filter
+
+## On the meeting which just won't end..
+
+We've all been there. You're on a marathon call and it just won't end. Nobody is talking. What you need is a flashbang. But what you have... is a flashbang and the Matrix.
 
 A virtual camera application that passes video through from a real camera with random Matrix-style glitch effects at configurable intervals. Perfect for adding some Neo-style flair to your long-running video calls.
 
